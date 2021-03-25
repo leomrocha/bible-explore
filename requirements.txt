@@ -1,0 +1,14 @@
+scipy==1.4.1
+seaborn==0.11.1
+tensorflow-gpu==2.3.0
+tensorflow-hub==0.11.0
+tensorflow-text==2.3.0
+pyvis==0.1.9
+# plotly==4.14.3
+# dash==1.19.0
+numpy==1.18.5
+pandas==1.2.2
+fastapi==0.63.0
+networkx==2.5
+matplotlib==3.3.4
+# bokeh==2.2.3
