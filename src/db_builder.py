@@ -12,7 +12,7 @@ import tensorflow_text
 import networkx as nx
 import pickle
 
-from typing import Union
+from typing import Union, List, Dict, Tuple
 
 
 def check_symmetry(a:np.array, rtol=1e-05, atol=1e-08):
@@ -40,10 +40,10 @@ def load_source_dataset(corpus_path:Union[str,Path], keys_path:Union[str,Path]) 
         kvs = list(rows)
         key_verse_map = { i[0] : i[1] for i in kvs[1:] } # omit the first line; It's the header
         
-    return key_verse_map, corpus_db 
+    return key_verse_map, corpus_db, verses 
 
 
-def embed_compare(txt:list(str), model, n_close:int=21, algorithm:str='inner') -> tuple(np.array):
+def embed_compare(txt:list, model, n_close:int=21, algorithm:str='inner'):
     """
     Computes the sentence encoding of each of the strings in the input list
     Computes the similarity between them
@@ -54,7 +54,7 @@ def embed_compare(txt:list(str), model, n_close:int=21, algorithm:str='inner') -
         n_close (int): number of closest elements to extract from the similarity matrix
         algorithm (str): [inner|cosine] Algorithm to compute the similarity between vectors
     """
-    bible_embeddings = model(verses)
+    bible_embeddings = model(txt)
     similarity_matrix_inner = np.inner(bible_embeddings, bible_embeddings)
     assert(check_symmetry(similarity_matrix_inner))
     
@@ -79,7 +79,7 @@ def embed_compare(txt:list(str), model, n_close:int=21, algorithm:str='inner') -
 
 
 def create_db_dict(bible_embeddings:np.array, corpus_db: list, key_verse_map:dict, 
-                   n_close:np.array, n_close_distances:np.array) -> Tuple(dict, nx.Graph):
+                   n_close:np.array, n_close_distances:np.array):
     """
     Creates a bible database in dictionary format for easy indexing
 
@@ -117,7 +117,8 @@ def create_db_dict(bible_embeddings:np.array, corpus_db: list, key_verse_map:dic
         
         bible_db[v_idx] = val
         # now compute the graph for networkx  # force int because pyvis complains about this
-        graph_dict[v_idx] = {int(k):1/v  for k,v in zip(n_close[i], close_matrix[i])}
+        # TODO put more info in the graph to be able to do more things, instead of just the plot
+        graph_dict[v_idx] = {int(k):1/v  for k,v in zip(n_close[i], n_close_distances[i])}
         
     g = nx.Graph(graph_dict)
     return bible_db, g
@@ -145,23 +146,24 @@ def main():
     # module_url = "https://tfhub.dev/google/universal-sentence-encoder-lite/2"
     # module_url = "https://tfhub.dev/google/universal-sentence-encoder/4"
     # module_url = 'https://tfhub.dev/google/universal-sentence-encoder-large/5'
-    
-    BIBLE_DB_PATH = "../db/bible-db.pkl"
-    BIBLE_EMBEDDINGS_PATH = "../db/bible-embeddings.pkl"
+    OUT_BASE_PATH_DB = Path('/home/leo/projects/AI/bible-explore')
+    BIBLE_DB_PATH = OUT_BASE_PATH_DB / "db/bible-db.pkl"
+    BIBLE_EMBEDDINGS_PATH = OUT_BASE_PATH_DB / "db/bible-embeddings.pkl"
+    networkx_graph_db_path = OUT_BASE_PATH_DB / "db/graph-db.pkl"
 
     similarity_algorithm = 'inner'
 
     # load bible dataset
-    key_verse_map, corpus_db = load_source_dataset(corpus_path, keys_path)
+    key_verse_map, corpus_db, verses = load_source_dataset(corpus_path, keys_path)
     # load tensorflow Universal Embedding 
     model = hub.load(module_url)
     # print ("module %s loaded" % module_url)
 
     # compute embedding vectors and get similarities
-    bible_embeddings, n_close_ids, n_close_distances = embed_compare(txt, model, algorithm='inner')
+    bible_embeddings, n_close_ids, n_close_distances = embed_compare(verses, model, algorithm='inner')
 
     # create database in a dictionary for fast indexing
-    bible_db, g_nx = create_db_dict(bible_embeddings, corpus_db, key_verse_map)
+    bible_db, g_nx = create_db_dict(bible_embeddings, corpus_db, key_verse_map, n_close_ids, n_close_distances)
     
     # Save databases
     # save the DB ## kind of big, 86 mb

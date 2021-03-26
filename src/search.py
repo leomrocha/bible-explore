@@ -36,17 +36,19 @@ def _get_edges(n_index, node, close_points):
     return nd_edges
 
 
-def get_subgraph(bible_db, node_id, close_points=5, levels=2):
+def get_subgraph(database, node_id:int, close_points:int=5, levels:int=2):
     """
     Get the subgraph from a node id
-    bible_db: the entire bible database in a dict
+    database: the entire bible database in a dict
     node_id: the node id
     close_points: the number of close points from each, => each point will have at most close_points outgoing edges
     levels: number of levels to go in depth for connections
     returns a networkx graph of the subgraph from the complete db centering the subgraph in the given node_id
     """
+    print(f"Getting sub graph node_id= {node_id} with {close_points} up to depth {levels}")
     g = nx.Graph()
-    if node_id not in bible_db:
+    if node_id not in database:
+        print()
         # there is no graph to build
         return g
     # Recursive is SO intuitive, but will explode the stack and memory for big graphs
@@ -61,7 +63,7 @@ def get_subgraph(bible_db, node_id, close_points=5, levels=2):
     while not q.empty() and cnt < levels+1:
         node_id, lvl = q.get()
         discovered.add(node_id)
-        node = bible_db[node_id]
+        node = database[node_id]
         nodes_to_add.append((node, lvl))
         # only add the edges if the level is not the max
         if lvl < levels:
@@ -72,24 +74,20 @@ def get_subgraph(bible_db, node_id, close_points=5, levels=2):
                 if en not in discovered:
                     q.put((en, lvl+1))
         cnt = lvl
-    # TODO
+    # TODO ??? 
     for node, lvl in nodes_to_add:
-#         if lvl < levels:
-# #             g.add_node(nid)
         g.add_node(node['index'], size=20, group=node['book_id'], title=node['name'], data=node['text'])
-#         g.add_node(int(nid), size=20, group=node['book_id'], title=node['name'], data=node['text'])
     
     for edg, lvl in edges_to_add:
         (sn, en, w) = edg
 #         print(edg)
         # pyvis complains that this are not int fields!! (but they are)
         g.add_edge(int(sn), int(en), weight=w)
-#         g.add_edge(sn, en)
-
+    print("returning graph to caller")
     return nodes_to_add, edges_to_add, g
 
 # Search function
-def get_closest_points(txt, model, n=21, algorithm='inner'):
+def get_closest_points(txt, model, embeddings, n=21, algorithm='inner'):
     """
     txt: the text to look for similarities
     n: the number of closest matches that will be searched
@@ -100,24 +98,34 @@ def get_closest_points(txt, model, n=21, algorithm='inner'):
     # compute input embedding 
     embd = model([txt])
     # compute proximity with all the existing points
-    similarity = np.inner(bible_embeddings, embd)
+    similarity = np.inner(embeddings, embd)
 #     print(similarity.shape)
     # get the closest n points ids
     # such as n>1 , when n==1 it shows only self-similarity
     partitions = np.argpartition(similarity, -n, axis=0)
 #     print(partitions.shape)
     n_close = partitions[-n:]
-    n_far = partitions[:n]
+    # n_far = partitions[:n]
     # needs a complete matrix
-    return n_close, n_far
+    # return n_close, n_far
+    return n_close
 
+def depth_search(txt:str, model, embeddings, database:dict, n_closest=5, n_depth=3, algo='inner'):
+    search_results = get_closest_points(txt, model, embeddings, n=n_closest, algorithm=algo).flatten()
+    closest = search_results[0]
+    nodes, edges, result_graph = get_subgraph(database, closest, close_points=5, levels=3)    
+    return search_results, nodes, edges, result_graph
 
 # example search and plotting the results:
-model = ...
-search_results = get_closest_points("and god is good", model)
-nodes, edges, sg = get_subgraph(bible_db, closest, close_points=5, levels=3)
+# model = ...
 
-nt = Network('800px', '800px', notebook=True)
-nt.from_nx(sg)
-nt.show('search-results.html')
 
+# nt = Network('800px', '800px', notebook=True)
+# nt.from_nx(sg)
+# nt.show('search-results.html')
+
+
+def test_params(*param, **argv):
+    
+    print(f'the input param: ')
+    return 'tested'
