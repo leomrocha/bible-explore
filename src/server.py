@@ -6,8 +6,13 @@ import sys
 import re
 from pathlib import Path
 import pickle
+
 # 
 from functools import lru_cache
+# UI
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+
 
 # models and NNs
 # import scipy as sp
@@ -20,6 +25,11 @@ import networkx as nx
 # engine files
 from . import config
 from .search import depth_search
+
+#
+
+templates = Jinja2Templates(directory="src/templates") 
+
 
 ####
 # Helpers and cache
@@ -74,10 +84,7 @@ def _search(txt:str):
 
 ### 
 
-app = FastAPI()
-
-@app.get('/search')
-async def search(query:str=""):
+def _search(query:str):
     settings = get_settings()
     # TODO if no query given, just select a random query from a basic list and return that
     search_results, nodes, edges, result_graph = _search(query)
@@ -88,5 +95,34 @@ async def search(query:str=""):
             f"closest {settings.N_CLOSEST}": list(search_results.tolist()),
             # "nodes": nodes,  # TODO serialize
             # "edges": edges,  # TODO serialize
-            "result_graph": None,  # NetworkX graph
+            # "result_graph": None,  # NetworkX graph  # TODO serialize
             }
+
+################################################################
+# App starts here
+################################################################
+app = FastAPI()
+app.mount("/static", StaticFiles(directory="src/static"), name="static")
+
+
+@app.get('/')
+async def home():
+    return templates.TemplateResponse("index.html", {"request": {}})
+
+
+@app.post('/search')
+async def search(query:str=""):
+    # return _search(query)
+    print(f"WOW the query is {query}")
+    return  {"message": f'Hola Loca!! pediste {query}', 
+            # f"closest {settings.N_CLOSEST}": list(search_results.tolist()),
+            # "nodes": nodes,  # TODO serialize
+            # "edges": edges,  # TODO serialize
+            # "result_graph": None,  # NetworkX graph  # TODO serialize
+            }
+    
+
+@app.get('/search')
+async def search(query:str=""):
+    # results = _search(query)
+    return templates.TemplateResponse("index.html", {"request": {"results": None} })

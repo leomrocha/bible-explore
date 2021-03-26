@@ -115,17 +115,3 @@ def depth_search(txt:str, model, embeddings, database:dict, n_closest=5, n_depth
     closest = search_results[0]
     nodes, edges, result_graph = get_subgraph(database, closest, close_points=5, levels=3)    
     return search_results, nodes, edges, result_graph
-
-# example search and plotting the results:
-# model = ...
-
-
-# nt = Network('800px', '800px', notebook=True)
-# nt.from_nx(sg)
-# nt.show('search-results.html')
-
-
-def test_params(*param, **argv):
-    
-    print(f'the input param: ')
-    return 'tested'
