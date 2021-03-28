@@ -26,8 +26,8 @@ class GlobalConfig(BaseSettings):
     ENV_STATE: Optional[str] = Field('dev', env="ENV_STATE")
 
     # environment specific variables do not need the Field class
-    N_CLOSEST: int = 5
-    N_DEPTH: int = 3
+    N_CLOSEST: int = 3
+    N_DEPTH: int = 2
     ALGO: str = 'inner'
     USE_MODULE_URL: str = None
     BIBLE_DB_PATH: str = None

@@ -36,7 +36,7 @@ def _get_edges(n_index, node, close_points):
     return nd_edges
 
 
-def get_subgraph(database, node_id:int, close_points:int=5, levels:int=2):
+def get_subgraph(database, node_id:int, n_closest:int=5, n_depth:int=2):
     """
     Get the subgraph from a node id
     database: the entire bible database in a dict
@@ -45,12 +45,13 @@ def get_subgraph(database, node_id:int, close_points:int=5, levels:int=2):
     levels: number of levels to go in depth for connections
     returns a networkx graph of the subgraph from the complete db centering the subgraph in the given node_id
     """
-    print(f"Getting sub graph node_id= {node_id} with {close_points} up to depth {levels}")
+    # print(f"Getting sub graph node_id= {node_id} with {close_points} up to depth {levels}")
     g = nx.Graph()
     if node_id not in database:
-        print()
+        print(f"Node {node_id} not Found in the DB!")
         # there is no graph to build
         return g
+        # TODO maybe return/raise an error/exception!?
     # Recursive is SO intuitive, but will explode the stack and memory for big graphs
     nid = node_id
     nodes_to_add = []  # (node_id, group, size, label, title, txt)
@@ -60,30 +61,30 @@ def get_subgraph(database, node_id:int, close_points:int=5, levels:int=2):
     q.put((node_id, 0))  # keep (node, depth from center in levels)
     cnt = 0
     # this tree/ graph transversal is not WOW HOW EFFICIENT, but it works well enough
-    while not q.empty() and cnt < levels+1:
+    while not q.empty() and cnt < n_depth+1:
         node_id, lvl = q.get()
         discovered.add(node_id)
         node = database[node_id]
         nodes_to_add.append((node, lvl))
         # only add the edges if the level is not the max
-        if lvl < levels:
-            nd_edges = _get_edges(node_id, node, close_points)
+        if lvl < n_depth:
+            nd_edges = _get_edges(node_id, node, n_closest)
             for edg in nd_edges:
                 edges_to_add.append((edg, lvl))
                 sn, en, w = edg
                 if en not in discovered:
                     q.put((en, lvl+1))
         cnt = lvl
-    # TODO ??? 
+
     for node, lvl in nodes_to_add:
-        g.add_node(node['index'], size=20, group=node['book_id'], title=node['name'], data=node['text'])
+        g.add_node(node['index'], size=60/(lvl+1), group=node['book_id'], title=node['name'], data=node['text'])
     
     for edg, lvl in edges_to_add:
         (sn, en, w) = edg
-#         print(edg)
-        # pyvis complains that this are not int fields!! (but they are)
+        # print(edg)
+        # pyvis complains that this are not int fields!! (but they are...)
         g.add_edge(int(sn), int(en), weight=w)
-    print("returning graph to caller")
+    print("returning graph to caller", len(nodes_to_add), len(edges_to_add))
     return nodes_to_add, edges_to_add, g
 
 # Search function
@@ -94,7 +95,6 @@ def get_closest_points(txt, model, embeddings, n=21, algorithm='inner'):
     algorithm: inner|cosine  # the algorithm to determine how the proximity is computed
     returns the closest n points to the input text based on the proximity algorithm
     """
-    # TODO
     # compute input embedding 
     embd = model([txt])
     # compute proximity with all the existing points
@@ -113,5 +113,5 @@ def get_closest_points(txt, model, embeddings, n=21, algorithm='inner'):
 def depth_search(txt:str, model, embeddings, database:dict, n_closest=5, n_depth=3, algo='inner'):
     search_results = get_closest_points(txt, model, embeddings, n=n_closest, algorithm=algo).flatten()
     closest = search_results[0]
-    nodes, edges, result_graph = get_subgraph(database, closest, close_points=5, levels=3)    
+    nodes, edges, result_graph = get_subgraph(database, closest, n_closest=5, n_depth=3)
     return search_results, nodes, edges, result_graph

@@ -12,6 +12,9 @@ import tensorflow_text
 import networkx as nx
 import pickle
 
+# for the dict upgrade
+from collections import abc
+# for Pydantic
 from typing import Union, List, Dict, Tuple
 
 
@@ -78,6 +81,35 @@ def embed_compare(txt:list, model, n_close:int=21, algorithm:str='inner'):
     return bible_embeddings, n_close_ids, n_close_distances
 
 
+# https://stackoverflow.com/a/3233356/4099701
+
+# def map_update(d, u):
+#     for k, v in u.items():
+#         if isinstance(v, abc.Mapping):
+#             d[k] = update(d.get(k, {}), v)
+#         else:
+#             d[k] = v
+#     return d
+
+
+def deep_update(d, u, depth=-1):
+    """
+    Recursively merge or update dict-like objects. 
+    >>> update({'k1': {'k2': 2}}, {'k1': {'k2': {'k3': 3}}, 'k4': 4})
+    {'k1': {'k2': {'k3': 3}}, 'k4': 4}
+    """
+
+    for k, v in u.iteritems():
+        if isinstance(v, Mapping) and not depth == 0:
+            r = deep_update(d.get(k, {}), v, depth=max(depth - 1, -1))
+            d[k] = r
+        elif isinstance(d, Mapping):
+            d[k] = u[k]
+        else:
+            d = {k: u[k]}
+    return d
+
+
 def create_db_dict(bible_embeddings:np.array, corpus_db: list, key_verse_map:dict, 
                    n_close:np.array, n_close_distances:np.array):
     """
@@ -92,10 +124,9 @@ def create_db_dict(bible_embeddings:np.array, corpus_db: list, key_verse_map:dic
         dict: a dict database for quick indexing
         nx.Graph: a nx.Graph containing the entire input domain
     """
-        # db contains all the information AND the embeddings, this also contains the graph information
     # db contains all the information AND the embeddings, this also contains the graph information
     bible_db = {}
-
+    book_idx = {}
     graph_dict = {}
 
     for i in range(1, len(corpus_db)-1):
@@ -116,12 +147,18 @@ def create_db_dict(bible_embeddings:np.array, corpus_db: list, key_verse_map:dic
         }
         
         bible_db[v_idx] = val
+        b_idx = { key_verse_map[verse[1]]: {int(verse[2]): {int(verse[3]): {
+            'index':v_idx,
+            'id': int(verse[0]),
+            'name': f"{key_verse_map[verse[1]]} {verse[2]}:{verse[3]}",
+        } }} }
+        book_idx = deep_update(book_idx, b_idx)
         # now compute the graph for networkx  # force int because pyvis complains about this
         # TODO put more info in the graph to be able to do more things, instead of just the plot
         graph_dict[v_idx] = {int(k):1/v  for k,v in zip(n_close[i], n_close_distances[i])}
         
     g = nx.Graph(graph_dict)
-    return bible_db, g
+    return bible_db, book_idx, g
 
 
 def main():
@@ -163,12 +200,19 @@ def main():
     bible_embeddings, n_close_ids, n_close_distances = embed_compare(verses, model, algorithm='inner')
 
     # create database in a dictionary for fast indexing
-    bible_db, g_nx = create_db_dict(bible_embeddings, corpus_db, key_verse_map, n_close_ids, n_close_distances)
+    bible_db, book_idx, g_nx = create_db_dict(bible_embeddings, corpus_db, key_verse_map, n_close_ids, n_close_distances)
+    book_keys = {v.lower():int(k) for k,v in key_verse_map.items()}
+
+    bible_db_all = {
+        'db': bible_db,
+        'book': book_idx,
+        'book2key': book_keys,
+    }
     
     # Save databases
     # save the DB ## kind of big, 86 mb
     with open(BIBLE_DB_PATH, 'wb') as f:  
-        pickle.dump(bible_db, f, pickle.HIGHEST_PROTOCOL)
+        pickle.dump(bible_db_all, f, pickle.HIGHEST_PROTOCOL)
 
     # the embeddings only
     with open(BIBLE_EMBEDDINGS_PATH, 'wb') as f:
