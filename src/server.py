@@ -94,7 +94,7 @@ def is_book(query:str, books_idx:Dict[str, int]) -> Optional[int] :
     # look for verse number, if verse not exists set verse as 1
     # return books_idx[book][chapter][verse]['index']
     
-    return 0
+    # return 0
     return None
     # return verse_id, (book, chapter, verse)
 
@@ -170,7 +170,8 @@ async def home():
 
 
 @app.get('/search', response_class=HTMLResponse)
-# async def search(q: Optional[str] = Query("Genesis", max_length=240, regex="HERE THE REGEX")):
+# async def search(q: Optional[str] = Query(None, max_length=240, regex="HERE THE REGEX")):
+# async def search(q: Optional[str] = Query(None, max_length=240)):
 async def search(q: Optional[str] = Query("Genesis 1:1", max_length=240)):
     query = _sanitize(q)
     search_results, nodes, edges, result_graph = results = _search(query)
