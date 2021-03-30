@@ -1,0 +1,16 @@
+<div class="card">
+    {# <div class="card-header">
+        <div class="card-title">Related</div>
+    </div> #}
+    {% for item, idx in response.nodes %}
+    <div class="card-body pb-0">
+        <div class="d-flex">
+            <div class="flex-1 pt-1 ml-2">
+                <h6 class="fw-bold mb-1" id="{{ item.id }}"> {{ item.name }}</h6>
+                <small class="text-muted"> {{ item.text }}</small>
+            </div>
+        </div>
+        <div class="separator-dashed"></div>
+    </div>
+    {% endfor %}
+</div>

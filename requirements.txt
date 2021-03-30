@@ -14,5 +14,5 @@ networkx==2.5
 # matplotlib==3.3.4
 # bokeh==2.2.3
 python-dotenv==0.15.0
-# FastAPI Form support needs this:
+# FastAPI Form support needs python-multipart
 python-multipart==0.0.5

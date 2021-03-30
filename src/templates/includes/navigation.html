@@ -12,9 +12,10 @@
 			<!-- Navbar Header -->
 			<nav class="navbar navbar-header navbar-expand-lg" data-background-color="light">
 				<div class="container-fluid">
-					<form class="navbar-form nav-search">
+					<form class="navbar-form nav-search" action="/search?" method="GET">
 						<div class="input-group">
-							<input type="text" placeholder="Search ..." class="form-control">
+							<label for="q"></label>
+							<input name="q" type="text"  placeholder="Search ..." class="form-control">
 							<div class="input-group-append">
 								<button type="submit" class="btn btn-search pr-1">
 									<i class="fa fa-search search-icon"></i>

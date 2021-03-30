@@ -84,7 +84,7 @@ def get_subgraph(database, node_id:int, n_closest:int=5, n_depth:int=2):
         # print(edg)
         # pyvis complains that this are not int fields!! (but they are...)
         g.add_edge(int(sn), int(en), weight=w)
-    print("returning graph to caller", len(nodes_to_add), len(edges_to_add))
+    # print("returning graph to caller", len(nodes_to_add), len(edges_to_add))
     return nodes_to_add, edges_to_add, g
 
 # Search function

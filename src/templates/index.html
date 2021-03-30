@@ -28,6 +28,11 @@
 
 </head>
 <body data-background-color="light">
+
+{# <ul>
+<li>{{ request }}</li>
+<li>{{ response }}</li>
+</ul>  #}
 	<div class="wrapper overlay-sidebar">
 
 		{% include 'includes/navigation.html' %}
@@ -37,34 +42,16 @@
 					<div class="row">
 						<div class="col-md-8">
 							<div class="card">
-								<div class="card-header">
+								{# <div class="card-header">
 									<div class="card-head-row">
 										<div class="card-title">Connexions</div>
 									</div>
-								</div>
-								<div class="card-body">
-									<div class="chart-container" style="min-height: 375px">
-										<canvas id="statisticsChart"></canvas>
-									</div>
-									<div id="myChartLegend"></div>
-								</div>
+								</div> #}
+								{% include 'includes/visjs_graph.html' %}
 							</div>
 						</div>
 						<div class="col-md-4">
-							<div class="card">
-								<div class="card-header">
-									<div class="card-title">Related</div>
-								</div>
-								<div class="card-body pb-0">
-									<div class="d-flex">
-										<div class="flex-1 pt-1 ml-2">
-											<h6 class="fw-bold mb-1" id="{{verse_id}}">Book Verse {{verse_title}}</h6>
-											<small class="text-muted"> verse text{{ verse_text }}</small>
-										</div>
-									</div>
-									<div class="separator-dashed"></div>
-								</div>
-							</div>
+							{% include 'includes/cards_verses.html' %}
 						</div>
 					</div>
 					
@@ -81,35 +68,6 @@
 	</div>
 
 	{% include 'includes/scripts.html' %}
-
-	<script>
-		$('#lineChart').sparkline([102,109,120,99,110,105,115], {
-			type: 'line',
-			height: '70',
-			width: '100%',
-			lineWidth: '2',
-			lineColor: '#177dff',
-			fillColor: 'rgba(23, 125, 255, 0.14)'
-		});
-
-		$('#lineChart2').sparkline([99,125,122,105,110,124,115], {
-			type: 'line',
-			height: '70',
-			width: '100%',
-			lineWidth: '2',
-			lineColor: '#f3545d',
-			fillColor: 'rgba(243, 84, 93, .14)'
-		});
-
-		$('#lineChart3').sparkline([105,103,123,100,95,105,115], {
-			type: 'line',
-			height: '70',
-			width: '100%',
-			lineWidth: '2',
-			lineColor: '#ffa534',
-			fillColor: 'rgba(255, 165, 52, .14)'
-		});
-	</script>
 
 </body>
 </html>

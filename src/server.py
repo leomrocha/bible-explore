@@ -11,10 +11,11 @@ from functools import lru_cache
 from typing import List, Dict, Tuple, Optional, Sequence, Union
 
 #
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, Form
 
 # UI
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 # Error handling
 from fastapi.responses import RedirectResponse
@@ -26,14 +27,16 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 import tensorflow as tf
 import tensorflow_hub as hub
 import tensorflow_text
+# graph transversal and visualization
 import networkx as nx
-
+from pyvis.network import Network
 # engine files
 from . import config
 from .search import depth_search, get_subgraph
 
 # Define template directory
 templates = Jinja2Templates(directory="src/templates") 
+
 
 ####
 # Helpers and cache
@@ -84,7 +87,7 @@ def is_book(query:str, books_idx:Dict[str, int]) -> Optional[int] :
     # TODO (correct orthographic errors -> give the hints in the UI to make it easier here) 
     # TODO verify the following regex for the book extraction (and write a unittest for it)
     # it's something like this:
-    # ([12]?[ _\-.;:-]+\s*)?([a-zA-Z])+((\s+\d+\s*)?([ _\-.;:-]+\s*\d+)?)?
+    # ([123]?[ _\-.;:-]+\s*)?([a-zA-Z])+((\s+\d+\s*)?([ _\-.;:-]+\s*\d+)?)?
     # TODO compare the book in the query to the existing ones,
     # if not exists return None
     # else look for the chapter, if chapter not exist set chapter as 1
@@ -129,19 +132,30 @@ def _search(txt:str):
 
 ### 
 
-# def _search(query:str):
-#     settings = get_settings()
-#     # TODO if no query given, just select a random query from a basic list and return that
-#     search_results, nodes, edges, result_graph = _search(query)
-#     # print(f'results: {results}')
-#     # Can't return the result like that, something extra must be done to be able to encode in JSON!
-#     # maybe pass that to base64? or another encoding?
-#     return {"message": f'Hola Loca!! pediste {query}', 
-#             f"closest {settings.N_CLOSEST}": list(search_results.tolist()),
-#             # "nodes": nodes,  # TODO serialize
-#             # "edges": edges,  # TODO serialize
-#             # "result_graph": None,  # NetworkX graph  # TODO serialize
-#             }
+
+def nx2vis_dict(graph: nx.Graph) -> Dict[str, object]:
+    """[summary]
+
+    Args:
+        graph (nx.Graph): [description]
+
+    Returns:
+        Dict[str, object]: [description]
+    """
+    # nt = Network(height='400px', width='50%', bgcolor='#2222', font_color='white')
+    nt = Network(height='400px', width='100%')
+    # nt = Network(height='100%', width='100%')
+    nt.from_nx(graph)
+    vis_nodes, vis_edges, vis_heading, vis_height, vis_width, vis_options = nt.get_network_data()
+    d = {
+        "nodes": vis_nodes, 
+        "edges": vis_edges,
+        "heading": vis_heading,
+        "height": vis_height,
+        "width": vis_width,
+        "options": vis_options,
+    }
+    return d
 
 ################################################################
 # App starts here
@@ -155,25 +169,19 @@ async def home():
     return templates.TemplateResponse("index.html", {"request": {}})
 
 
-# @app.post('/search')
-# async def search(query:str=""):
-#     # return _search(query)
-#     print(f"WOW the query is {query}")
-#     return  {"message": f'Hola Loca!! pediste {query}', 
-#             # f"closest {settings.N_CLOSEST}": list(search_results.tolist()),
-#             # "nodes": nodes,  # TODO serialize
-#             # "edges": edges,  # TODO serialize
-#             # "result_graph": None,  # NetworkX graph  # TODO serialize
-#             }
-    
-
-@app.get('/search')
+@app.get('/search', response_class=HTMLResponse)
 # async def search(q: Optional[str] = Query("Genesis", max_length=240, regex="HERE THE REGEX")):
 async def search(q: Optional[str] = Query("Genesis 1:1", max_length=240)):
     query = _sanitize(q)
-    results = _search(query)
-    print(results[:1])
-    return templates.TemplateResponse("index.html", {"request": {"results": None} })
+    search_results, nodes, edges, result_graph = results = _search(query)
+    # print(results[:2])
+    visdict = nx2vis_dict(result_graph)
+    return templates.TemplateResponse("index.html", 
+                                      context={"request": {"q": q}, 
+                                               "response":{
+                                                "vis": visdict,
+                                                "nodes":nodes }
+                                                })
 
 # in case anybody wants to play with the API, they'll go back to root
 @app.exception_handler(StarletteHTTPException)
