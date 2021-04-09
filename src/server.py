@@ -166,7 +166,8 @@ app.mount("/static", StaticFiles(directory="src/static"), name="static")
 
 @app.get('/')
 async def home():
-    return templates.TemplateResponse("index.html", {"request": {}})
+    return RedirectResponse("/search")
+    # return templates.TemplateResponse("index.html", {"request": {}})
 
 
 @app.get('/search', response_class=HTMLResponse)
@@ -187,4 +188,4 @@ async def search(q: Optional[str] = Query("Genesis 1:1", max_length=240)):
 # in case anybody wants to play with the API, they'll go back to root
 @app.exception_handler(StarletteHTTPException)
 async def custom_http_exception_handler(request, exc):
-    return RedirectResponse("/")
+    return RedirectResponse("/search")
