@@ -14,7 +14,6 @@ def test_home():
 
 def test_sanitize():
     san1 = sanitize("ThiS? Is,.:;'\" text -_  >< |lalA\n What!!")
-    print("sanitized = ", san1)
     assert san1 == "this is,.:; text -_ lala what"
     
 def test_re_book():
