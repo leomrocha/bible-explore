@@ -169,6 +169,20 @@ async def home():
     return RedirectResponse("/search")
     # return templates.TemplateResponse("index.html", {"request": {}})
 
+# API call, does not contain templated UI 
+@app.get('/api/v1/search')
+async def search(q: Optional[str] = Query("Genesis 1:1", max_length=240)):
+    query = _sanitize(q)
+    search_results, nodes, edges, result_graph = results = _search(query)
+    # print(results[:2])
+    res={"request": {"q": q}, 
+         "response":{
+            "search_results": search_results,
+            "edges": edges,
+            "nodes":nodes,
+            "result_graph":result_graph,
+            }
+    return res
 
 @app.get('/search', response_class=HTMLResponse)
 # async def search(q: Optional[str] = Query(None, max_length=240, regex="HERE THE REGEX")):
