@@ -1,0 +1,45 @@
+[tool.poetry]
+name = "bible-search"
+version = "0.1.0"
+description = "Similarity Search and Graphical Exploration of the bible"
+authors = ["Leonardo M. Rocha <contact@truffle.ai>"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.1.2"
+tox = "^3.20.1"
+aiofiles = "^0.6.0"
+scipy = "^1.4.1"
+# for some plotting, most probably won't be used
+seaborn = "^0.11.1"
+# for NLP encoding and Similarity search 
+tensorflow-gpu = "^2.4.0"
+tensorflow-hub = "^0.11.0"
+tensorflow-text = "^2.4.0"
+pyvis = "^0.1.9"  # current graph visualization, to be changed to something better
+# plotly = "^4.14.3"
+# dash = "^1.19.0"
+numpy = "^1.18.5"
+# pandas = "^1.2.2"
+fastapi = "^0.63.0"
+networkx = "^2.5"
+# matplotlib = "^3.3.4"
+# bokeh = "^2.2.3"
+python-dotenv = "^0.15.0"
+# FastAPI Form support needs python-multipart
+python-multipart = "^0.0.5"
+
+# tests and package management 
+# pytest
+# tox
+# poetry
+
+[build-system]
+# tests and package management 
+# pytest
+# tox
+# poetry
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

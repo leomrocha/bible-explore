@@ -38,3 +38,6 @@ uvicorn src.server:app --reload
 
 5. Develop
 And you can create a _Pull Request_ if you make something :)
+
+## Testing
+

@@ -37,6 +37,14 @@ from .search import depth_search, get_subgraph
 # Define template directory
 templates = Jinja2Templates(directory="src/templates") 
 
+# compile regex
+# sanitation regex
+re_sanitize = re.compile(r'[^a-zA-Z0-9 ,.:;_-]+')
+re_whitespaces = re.compile(r'[\s]+')
+# book matching -> for examples check the unit tests
+# re_book = re.compile(r'^[\s]*(([\d]+)?[ _\-.;:-]+\s*)?([a-zA-Z]+)((\s+(\d+)\s*)?[ _\-.;:-]+\s*(\d+)?)?\s*$')
+re_book = re.compile(r'^[\s]*(([\d]+)?[ _\-.;:-]+\s*)?([a-zA-Z]+)((\s+\d+\s*)?[ _\-.;:-]+\s*(\d+)?)?\s*$')
+
 
 ####
 # Helpers and cache
@@ -45,22 +53,20 @@ def get_settings():
     cfg = config.cfg_factory()
     return cfg
 
-# TODO unit test this function
 @lru_cache
-def _sanitize(query:str) -> str:
-    query = query.lower()
-    # TODO do some other validation if needed
-    # replace all characters not in [a-zA-Z0-9 ,.:;_\-]  
-    # and then replace all several spaces for only one
-    return query
+def sanitize(query:str) -> str:
+    """
+    eliminates all characters not in [a-zA-Z0-9 ,.:;_-] and duplicated spaces
+    """
+    res = re_sanitize.sub(' ', query.lower()) # replace for space to keep word spacing
+    res = re_whitespaces.sub(' ', res)  # replace all joint whitespaces with only one 
+    res = res.strip()  # clean trailing whitespaces
+    return res
 
 
 @lru_cache()
 def _get_engines():
     settings = get_settings()
-    # print("getting the settings from a .env file")
-    # print(settings.schema(by_alias=True))
-    # print(settings)
     # tensorflow model
     model = hub.load(settings.USE_MODULE_URL)
     # embeddings (numpy)
@@ -73,7 +79,7 @@ def _get_engines():
     # return None, None, None
 
 
-def is_book(query:str, books_idx:Dict[str, int]) -> Optional[int] :
+def is_book(query:str, books_idx) -> Optional[int] :
     """[summary]
     Args:
         query (str): the query string 
@@ -82,21 +88,25 @@ def is_book(query:str, books_idx:Dict[str, int]) -> Optional[int] :
     Returns:
         Optional[int]: the book index 
     """
-    # TODO try to match all the possible books:
-    # [12] book [ chapter [verse] ]
-    # TODO (correct orthographic errors -> give the hints in the UI to make it easier here) 
-    # TODO verify the following regex for the book extraction (and write a unittest for it)
+    # verify the following regex for the book extraction (and write a unittest for it)
     # it's something like this:
     # ([123]?[ _\-.;:-]+\s*)?([a-zA-Z])+((\s+\d+\s*)?([ _\-.;:-]+\s*\d+)?)?
-    # TODO compare the book in the query to the existing ones,
-    # if not exists return None
-    # else look for the chapter, if chapter not exist set chapter as 1
-    # look for verse number, if verse not exists set verse as 1
-    # return books_idx[book][chapter][verse]['index']
-    
-    # return 0
-    return None
-    # return verse_id, (book, chapter, verse)
+    matches = re_book.match(query)
+    _, npref, book, _, chapter, verse = matches.groups()
+    # TODO (correct orthographic errors -> give the hints in the UI to make it easier here) 
+    # book name can contain a numbre prefix, this makes sure to have it clean an in the DB format
+    book = ' '.join([npref, book]) if npref else book
+    # there is an error in the REGEX that makes chapter be none and verse be a number in one particular case
+    # but after 2 hours of debugging it I can't find a solution so:
+    if chapter is None and verse is not None:
+        chapter = verse
+        verse = None
+    chapter = 1 if not chapter else int(chapter)
+    verse = 1 if not verse else int(verse)
+    try: 
+        return books_idx[book][int(chapter)][int(verse)]['index']
+    except:
+        return None
 
 
 @lru_cache()
@@ -113,9 +123,6 @@ def _search(txt:str):
         ret = get_subgraph(bible_db, closest, 
                            n_closest=settings.N_CLOSEST,
                            n_depth=settings.N_DEPTH)
-        # print ("Returned Values: ", ret)
-        # print("let s see \n \n ")
-        # print("\n\n")
         nodes, edges, result_graph  = ret
         # no need to compute the similarity matrix, we know it already from the graph DB
         search_results = bible_db[closest]['close_to'][:settings.N_CLOSEST]
@@ -125,8 +132,6 @@ def _search(txt:str):
                          n_closest=settings.N_CLOSEST,
                          n_depth=settings.N_DEPTH,
                          algo=settings.ALGO)
-    # print("Returning results ")
-    # print(nodes, edges, result_graph)
     # return search_results, nodes, edges, result_graph
     return results
 
@@ -171,10 +176,9 @@ async def home():
 
 # API call, does not contain templated UI 
 @app.get('/api/v1/search')
-async def search(q: Optional[str] = Query("Genesis 1:1", max_length=240)):
-    query = _sanitize(q)
+async def api_search(q: Optional[str] = Query("Genesis 1:1", max_length=240)):
+    query = sanitize(q)
     search_results, nodes, edges, result_graph = results = _search(query)
-    # print(results[:2])
     res={"request": {"q": q}, 
          "response":{
             "search_results": search_results,
@@ -182,15 +186,15 @@ async def search(q: Optional[str] = Query("Genesis 1:1", max_length=240)):
             "nodes":nodes,
             "result_graph":result_graph,
             }
+    }
     return res
 
 @app.get('/search', response_class=HTMLResponse)
 # async def search(q: Optional[str] = Query(None, max_length=240, regex="HERE THE REGEX")):
 # async def search(q: Optional[str] = Query(None, max_length=240)):
 async def search(q: Optional[str] = Query("Genesis 1:1", max_length=240)):
-    query = _sanitize(q)
+    query = sanitize(q)
     search_results, nodes, edges, result_graph = results = _search(query)
-    # print(results[:2])
     visdict = nx2vis_dict(result_graph)
     return templates.TemplateResponse("index.html", 
                                       context={"request": {"q": q}, 

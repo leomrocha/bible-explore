@@ -41,7 +41,7 @@ def load_source_dataset(corpus_path:Union[str,Path], keys_path:Union[str,Path]) 
     with open(keys_path, newline='') as f:
         rows = csv.reader(f)
         kvs = list(rows)
-        key_verse_map = { i[0] : i[1] for i in kvs[1:] } # omit the first line; It's the header
+        key_verse_map = { int(i[0]) : i[1].lower() for i in kvs[1:] } # omit the first line; It's the header
         
     return key_verse_map, corpus_db, verses 
 
@@ -133,11 +133,12 @@ def create_db_dict(bible_embeddings:np.array, corpus_db: list, key_verse_map:dic
         verse = corpus_db[i]
     #     k_id = int(verse[0])
         v_idx = int(i-1)  # force int because pyvis complains about this
+        verse_imap = int(verse[1])
         val = {
             'index':v_idx,
             'id': int(verse[0]),
-            'name': f"{key_verse_map[verse[1]]} {verse[2]}:{verse[3]}",
-            'book_id': int(verse[1]),
+            'name': f"{key_verse_map[verse_imap]} {verse[2]}:{verse[3]}",
+            'book_id': verse_imap,
             'chapter_id': int(verse[2]),
             'verse_id': int(verse[3]),
             'text': verse[4],
@@ -147,10 +148,10 @@ def create_db_dict(bible_embeddings:np.array, corpus_db: list, key_verse_map:dic
         }
         
         bible_db[v_idx] = val
-        b_idx = { key_verse_map[verse[1]]: {int(verse[2]): {int(verse[3]): {
+        b_idx = { key_verse_map[verse_imap]: {int(verse[2]): {int(verse[3]): {
             'index':v_idx,
             'id': int(verse[0]),
-            'name': f"{key_verse_map[verse[1]]} {verse[2]}:{verse[3]}",
+            'name': f"{key_verse_map[verse_imap]} {verse[2]}:{verse[3]}",
         } }} }
         book_idx = deep_update(book_idx, b_idx)
         # now compute the graph for networkx  # force int because pyvis complains about this
